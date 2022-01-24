@@ -367,6 +367,18 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
+    Path getSshKeyPath() {
+        def path = get('sshPath')
+        if( !path )
+            return null
+
+        return (path as Path).complete()
+    }
+
+    String getSShUserHost() {
+        return get('sshUserHost')
+    }
+
     Integer getAttempt() {
         get('attempt') as Integer ?: 1
     }
