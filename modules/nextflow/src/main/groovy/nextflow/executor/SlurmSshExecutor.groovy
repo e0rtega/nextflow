@@ -34,6 +34,9 @@ class SlurmSshExecutor extends AbstractGridExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
+    private String sshKeyPath;
+    private String sshUserHost;
+
     private boolean hasSignalOpt(Map config) {
         def opts = config.clusterOptions?.toString()
         return opts ? opts.contains('--signal ') || opts.contains('--signal=') : false
@@ -48,6 +51,11 @@ class SlurmSshExecutor extends AbstractGridExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
+
+        // Setting ssh stuff
+        sshKeyPath = task.config.getSshKeyPath().toString()
+        sshUserHost =task.config.getSShUserHost()
+        log.info "!!!!!! SSH DECLARATION !!!!!!" + sshKeyPath + " " + sshUserHost
 
         result << '-D' << quote(task.workDir)
         result << '-J' << getJobNameFor(task)
@@ -103,7 +111,7 @@ class SlurmSshExecutor extends AbstractGridExecutor {
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
         ['ssh', '-i', task.config.getSshKeyPath().toString(), task.config.getSShUserHost(), 'sbatch', scriptFile.getName()]
-
+        log.info "!!!!!! SSH SBATCH !!!!!!" + sshKeyPath + " " + sshUserHost
     }
 
     /**
@@ -131,14 +139,18 @@ class SlurmSshExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected List<String> getKillCommand() { ['ssh', '-i', task.config.getSshKeyPath().toString(),
-                                               task.config.getSShUserHost(), 'scancel'] }
+    protected List<String> getKillCommand() {
+
+        ['ssh', '-i', sshKeyPath, sshUserHost, 'scancel']
+        log.info "!!!!!! SSH SCANCEL !!!!!!" + sshKeyPath + " " + sshUserHost
+    }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
 
-        final result = ['ssh', '-i', task.config.getSshKeyPath().toString(),
-                                 task.config.getSShUserHost(), 'squeue','--noheader','-o','%i %t', '-t', 'all']
+        final result = ['ssh', '-i', sshKeyPath, sshUserHost,
+                        'squeue','--noheader','-o','%i %t', '-t', 'all']
+        log.info "!!!!!! SSH SQUEUE !!!!!!" + sshKeyPath + " " + sshUserHost
 
         if( queue )
             result << '-p' << queue.toString()
